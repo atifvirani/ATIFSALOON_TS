@@ -20,6 +20,7 @@ const defaultData = {
   customers: [],
   staff: [],      
   inventory: [],  
+  expenses: [],
   coupons: [],    
   consents: [], 
   formulas: []  
@@ -91,7 +92,7 @@ app.whenReady().then(async () => {
     return db.data.services;
   });
 
-  // 5. SAVE BILL
+  // 5. SAVE BILL (With Customer Update)
   ipcMain.handle('save-bill', async (e, billData) => {
     const newBill = {
       id: Date.now(),
@@ -99,17 +100,28 @@ app.whenReady().then(async () => {
       ...billData
     };
     db.data.bills.push(newBill);
+
+    // Update Customer "Visits"
+    const customerIndex = db.data.customers.findIndex(c => c.phone === billData.customerPhone);
+    if (customerIndex !== -1) {
+      db.data.customers[customerIndex].visits = (db.data.customers[customerIndex].visits || 0) + 1;
+    }
+
     await db.write();
     return { success: true, billId: newBill.id };
   });
 
   // 6. DASHBOARD STATS
   ipcMain.handle('get-stats', () => {
-    const totalRevenue = db.data.bills.reduce((sum, bill) => sum + bill.total, 0);
+    const revenue = db.data.bills.reduce((sum, bill) => sum + bill.total, 0);
+    const expenses = db.data.expenses.reduce((sum, exp) => sum + parseInt(exp.amount), 0);
+    const profit = revenue - expenses;
+
     return {
-      revenue: totalRevenue,
-      appointments: db.data.bills.length,
-      activeChairs: 0 
+      revenue,
+      expenses,
+      profit,
+      appointments: db.data.bills.length
     };
   });
 });

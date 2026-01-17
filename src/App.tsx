@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { LayoutDashboard, Scissors, Users, Settings, LogOut, FileText } from 'lucide-react';
+import { LayoutDashboard, Scissors, Users, Settings, LogOut, FileText, TrendingDown, TrendingUp, PlusCircle } from 'lucide-react';
 import SettingsPage from './Settings';
 import BillingPage from './Billing';
 import InvoicesPage from './Invoices';
@@ -10,7 +10,11 @@ const { ipcRenderer } = window.require('electron');
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [stats, setStats] = useState({ revenue: 0, activeChairs: 0, appointments: 0 });
+  const [stats, setStats] = useState({ revenue: 0, expenses: 0, profit: 0, appointments: 0 });
+  
+  // Expense Form State
+  const [expenseName, setExpenseName] = useState('');
+  const [expenseAmount, setExpenseAmount] = useState('');
 
   useEffect(() => {
     if (activeTab === 'dashboard') loadStats();
@@ -19,6 +23,17 @@ function App() {
   async function loadStats() {
     const data = await ipcRenderer.invoke('get-stats');
     setStats(data);
+  }
+
+  async function addExpense() {
+    if (!expenseName || !expenseAmount) return;
+    await ipcRenderer.invoke('add-data', {
+      tableName: 'expenses',
+      item: { name: expenseName, amount: parseInt(expenseAmount), type: 'Expense' }
+    });
+    setExpenseName('');
+    setExpenseAmount('');
+    loadStats(); // Refresh numbers
   }
 
   return (
@@ -62,20 +77,54 @@ function App() {
         ) : activeTab === 'staff' ? (
           <StaffPage />
         ) : (
-          /* DASHBOARD */
+          
+          /* --- DASHBOARD --- */
           <div className="p-8 h-full overflow-auto">
             <header className="flex justify-between items-center mb-8">
-              <h2 className="text-3xl font-bold capitalize text-white">{activeTab}</h2>
-              <div className="bg-[#D4AF37] text-black px-4 py-2 rounded-full font-bold shadow-lg shadow-yellow-900/20">
+              <h2 className="text-3xl font-bold capitalize text-white">Business Overview</h2>
+              <div className="bg-[#D4AF37] text-black px-4 py-2 rounded-full font-bold shadow-lg">
                 Server: OFFLINE 🔴
               </div>
             </header>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <Card title="Total Revenue" value={`₹ ${stats.revenue}`} />
-              <Card title="Active Chairs" value={`${stats.activeChairs} / 6`} />
-              <Card title="Total Bills" value={stats.appointments} />
+            {/* STAT CARDS */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              <Card title="Total Revenue" value={`₹ ${stats.revenue}`} icon={<TrendingUp className="text-green-500"/>} />
+              <Card title="Expenses" value={`₹ ${stats.expenses}`} icon={<TrendingDown className="text-red-500"/>} />
+              <div className={`p-6 rounded-xl border border-gray-700 ${stats.profit >= 0 ? 'bg-green-900/20 border-green-500' : 'bg-red-900/20 border-red-500'}`}>
+                 <h3 className="text-gray-400 text-sm mb-2 uppercase tracking-wider">Net Profit</h3>
+                 <p className={`text-3xl font-bold ${stats.profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>₹ {stats.profit}</p>
+              </div>
             </div>
+
+            {/* QUICK EXPENSE ADDER */}
+            <div className="bg-[#2C2C2C] p-6 rounded-xl border border-gray-700 max-w-2xl">
+              <h3 className="text-xl font-bold text-[#D4AF37] mb-4 flex items-center gap-2">
+                <PlusCircle size={20}/> Quick Expense Log
+              </h3>
+              <div className="flex gap-4">
+                <input 
+                  className="flex-1 bg-[#1a1a1a] text-white p-3 rounded-lg border border-gray-600 focus:border-red-500 outline-none"
+                  placeholder="Item (e.g. Tea, Cleaner, Lunch)"
+                  value={expenseName}
+                  onChange={e => setExpenseName(e.target.value)}
+                />
+                <input 
+                  className="w-32 bg-[#1a1a1a] text-white p-3 rounded-lg border border-gray-600 focus:border-red-500 outline-none"
+                  placeholder="Amount"
+                  type="number"
+                  value={expenseAmount}
+                  onChange={e => setExpenseAmount(e.target.value)}
+                />
+                <button 
+                  onClick={addExpense}
+                  className="bg-red-600 hover:bg-red-700 text-white font-bold px-6 py-3 rounded-lg transition"
+                >
+                  Add
+                </button>
+              </div>
+            </div>
+
           </div>
         )}
 
@@ -92,12 +141,17 @@ function SidebarItem({ icon, text, active, onClick }: any) {
   );
 }
 
-function Card({ title, value }: any) {
+function Card({ title, value, icon }: any) {
   return (
-    <div className="bg-[#2C2C2C] p-6 rounded-xl border border-gray-700">
-      <h3 className="text-gray-400 text-sm mb-2 uppercase tracking-wider">{title}</h3>
-      <p className="text-3xl font-bold text-[#D4AF37]">{value}</p>
+    <div className="bg-[#2C2C2C] p-6 rounded-xl border border-gray-700 flex justify-between items-start">
+      <div>
+        <h3 className="text-gray-400 text-sm mb-2 uppercase tracking-wider">{title}</h3>
+        <p className="text-3xl font-bold text-[#D4AF37]">{value}</p>
+      </div>
+      {icon}
     </div>
+  );
+}
   );
 }
 
