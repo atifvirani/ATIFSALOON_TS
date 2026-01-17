@@ -7,6 +7,10 @@ export default function Billing() {
   const [staffList, setStaffList] = useState<any[]>([]);
   const [cart, setCart] = useState<any[]>([]);
   
+  // CATEGORY STATE
+  const [categories, setCategories] = useState<string[]>(['All', 'Hair', 'Skin', 'Aesthetics', 'Products']);
+  const [selectedCategory, setSelectedCategory] = useState('All');
+  
   // Smart Search
   const [customers, setCustomers] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -84,22 +88,34 @@ export default function Billing() {
   };
   const filteredCustomers = customers.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase()) || c.phone.includes(searchTerm));
 
+  // --- NEW: FILTER SERVICES BY CATEGORY ---
+  const filteredServices = services.filter(s => {
+    if (selectedCategory === 'All') return true;
+    return s.category === selectedCategory;
+  });
+
   return (
     <div className="flex h-full gap-6 p-6 overflow-hidden">
       {/* LEFT: MENU */}
       <div className="flex-1 bg-[#2C2C2C] rounded-xl p-6 border border-gray-700 overflow-auto">
         <div className="flex justify-between items-center mb-4">
            <h2 className="text-2xl font-bold text-[#D4AF37]">Services</h2>
-           {/* CATEGORY TABS (Visual Only for now) */}
+           {/* CATEGORY TABS (Now Functional!) */}
            <div className="flex gap-2 text-sm">
-              <button className="bg-[#D4AF37] text-black px-3 py-1 rounded-full font-bold">All</button>
-              <button className="bg-[#1a1a1a] text-gray-400 border border-gray-600 px-3 py-1 rounded-full">Hair</button>
-              <button className="bg-[#1a1a1a] text-gray-400 border border-gray-600 px-3 py-1 rounded-full">Skin</button>
+              {categories.map(cat => (
+                <button 
+                  key={cat}
+                  onClick={() => setSelectedCategory(cat)}
+                  className={`px-3 py-1 rounded-full transition ${selectedCategory === cat ? 'bg-[#D4AF37] text-black font-bold' : 'bg-[#1a1a1a] text-gray-400 border border-gray-600'}`}
+                >
+                  {cat}
+                </button>
+              ))}
            </div>
         </div>
         
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          {services.map((s) => (
+          {filteredServices.map((s) => (
             <button key={s.id} onClick={() => setCart([...cart, s])} className="bg-[#1a1a1a] p-4 rounded-lg hover:border-[#D4AF37] border border-transparent transition text-left group">
               <h3 className="font-bold text-white group-hover:text-[#D4AF37]">{s.name}</h3>
               <p className="text-gray-400">₹ {s.price}</p>

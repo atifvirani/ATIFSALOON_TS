@@ -6,31 +6,33 @@ export default function Settings() {
   const [services, setServices] = useState<any[]>([]);
   const [newName, setNewName] = useState('');
   const [newPrice, setNewPrice] = useState('');
+  const [newCategory, setNewCategory] = useState('Hair');
 
-  // Load services when page opens
-  useEffect(() => {
-    loadServices();
-  }, []);
+  useEffect(() => { loadServices(); }, []);
 
   async function loadServices() {
-    const data = await ipcRenderer.invoke('get-services');
+    const data = await ipcRenderer.invoke('get-data', 'services');
     setServices(data);
   }
 
   async function addService() {
     if (!newName || !newPrice) return;
-    const updated = await ipcRenderer.invoke('add-service', { 
-      name: newName, 
-      price: parseInt(newPrice) 
+    await ipcRenderer.invoke('add-data', {
+      tableName: 'services',
+      item: { 
+        name: newName, 
+        price: parseInt(newPrice),
+        category: newCategory
+      } 
     });
-    setServices(updated);
     setNewName('');
     setNewPrice('');
+    loadServices();
   }
 
   async function deleteService(id: number) {
-    const updated = await ipcRenderer.invoke('delete-service', id);
-    setServices(updated);
+    await ipcRenderer.invoke('delete-data', { tableName: 'services', id });
+    loadServices();
   }
 
   return (
@@ -41,23 +43,27 @@ export default function Settings() {
       <div className="bg-[#2C2C2C] p-6 rounded-xl border border-gray-700 mb-8 flex gap-4 items-end">
         <div className="flex-1">
           <label className="block text-gray-400 text-sm mb-2">Service Name</label>
-          <input 
-            type="text" 
-            placeholder="e.g. Mens Haircut"
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            className="w-full bg-[#1a1a1a] text-white p-3 rounded-lg border border-gray-600 focus:border-[#D4AF37] outline-none"
-          />
+          <input className="w-full bg-[#1a1a1a] text-white p-3 rounded-lg border border-gray-600 focus:border-[#D4AF37] outline-none" placeholder="e.g. Mens Haircut" value={newName} onChange={(e) => setNewName(e.target.value)} />
         </div>
+        
+        {/* NEW CATEGORY SELECTOR */}
+        <div className="w-48">
+          <label className="block text-gray-400 text-sm mb-2">Category</label>
+          <select 
+            className="w-full bg-[#1a1a1a] text-white p-3 rounded-lg border border-gray-600 focus:border-[#D4AF37] outline-none"
+            value={newCategory}
+            onChange={(e) => setNewCategory(e.target.value)}
+          >
+            <option>Hair</option>
+            <option>Skin</option>
+            <option>Aesthetics</option>
+            <option>Products</option>
+          </select>
+        </div>
+
         <div className="w-48">
           <label className="block text-gray-400 text-sm mb-2">Price (₹)</label>
-          <input 
-            type="number" 
-            placeholder="500"
-            value={newPrice}
-            onChange={(e) => setNewPrice(e.target.value)}
-            className="w-full bg-[#1a1a1a] text-white p-3 rounded-lg border border-gray-600 focus:border-[#D4AF37] outline-none"
-          />
+          <input type="number" placeholder="500" value={newPrice} onChange={(e) => setNewPrice(e.target.value)} className="w-full bg-[#1a1a1a] text-white p-3 rounded-lg border border-gray-600 focus:border-[#D4AF37] outline-none" />
         </div>
         <button 
           onClick={addService}
@@ -77,7 +83,10 @@ export default function Settings() {
               </div>
               <div>
                 <h3 className="font-bold text-white">{s.name}</h3>
-                <p className="text-[#D4AF37]">₹ {s.price}</p>
+                <div className="flex gap-2 text-xs">
+                   <span className="text-[#D4AF37]">₹ {s.price}</span>
+                   <span className="text-gray-500">• {s.category || 'General'}</span>
+                </div>
               </div>
             </div>
             <button 
